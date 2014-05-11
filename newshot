@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+#
+# newshot - dealwith screenshot functions, with tolerance to macbook retina display users
+# Lochii Connectivity - 2014 - version 1.0
+# inspired by 'shot', by Job Snijders
+#
+
+# Path to which your file will be SCP'd, assuming you are authenticating with SSH key
+SCP_PATH="lochii@uncertainty.convergence.cx:wwwroot/screenshots"
+# Path at which your file can be rendered as a URL
+URL_PATH="http://www2.convergence.cx/screenshots/"
+# Set MAC_TYPE to 1 for non-retina displays, and 2 for Retina displays
+MAC_TYPE="2"
+# Path to your temporary filesystem
+SS_PATH="/tmp"
+# Current date
+NOW=$(date +%s)
+
+exec 1>/dev/null 2>/dev/null
+screencapture -i -r $SS_PATH/screenshot$NOW@2X.png
+
+if [ -f $SS_PATH/screenshot$NOW@2X.png ]; then
+    SO_FILE=screenshot$NOW@2X.png
+    SO_PILE=$SS_PATH/$SO_FILE
+    SS_FILE=screenshot$NOW@1X.png
+    SS_PILE=$SS_PATH/$SS_FILE
+    WIDTH=$(($(sips -g pixelWidth $SO_PILE | cut -s -d ':' -f 2 | cut -c 2-)/$MAC_TYPE))
+    sips --resampleWidth $WIDTH $SO_PILE --out $SS_PILE
+    if [ -e $SS_PILE ]
+     then
+      if [ "$1" = "-upload" ]
+      then
+       scp $SS_PILE $SCP_PATH
+       echo "$URL_PATH/$SS_FILE" | pbcopy
+      else
+       /usr/bin/osascript -e "tell application \"Finder\" to set the clipboard to (read \"$SS_PILE\" as TIFF picture)"
+      fi
+      rm -rf $SS_PILE
+    fi
+fi
+
